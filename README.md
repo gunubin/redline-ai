@@ -83,6 +83,8 @@ file = ":path.md"
 - Node.js 22+
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated
 
+> **Note:** redline currently uses Claude Code as the AI backend. Other AI agent CLIs are not supported yet.
+
 ## Install
 
 ```
