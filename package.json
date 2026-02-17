@@ -1,0 +1,60 @@
+{
+  "name": "redline-ai",
+  "version": "0.1.0",
+  "description": "Inline AI editing for local Markdown files",
+  "type": "module",
+  "bin": {
+    "redline-ai": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc && node esbuild.config.js",
+    "build:overlay": "node esbuild.config.js",
+    "dev": "tsc --watch",
+    "test": "node --import tsx --test test/**/*.test.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.1",
+    "chokidar": "^4.0.3",
+    "commander": "^13.1.0",
+    "hono": "^4.7.4",
+    "http-proxy": "^1.18.1",
+    "markdown-it": "^14.1.0",
+    "shiki": "^3.2.1",
+    "toml": "^3.0.0",
+    "ws": "^8.19.0"
+  },
+  "devDependencies": {
+    "@types/http-proxy": "^1.17.16",
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "^22.13.4",
+    "@types/ws": "^8.18.1",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "dist",
+    "overlay/dist"
+  ],
+  "keywords": [
+    "markdown",
+    "ai",
+    "editor",
+    "cli",
+    "preview"
+  ],
+  "license": "MIT",
+  "author": "gunubin",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gunubin/redline.git"
+  },
+  "homepage": "https://github.com/gunubin/redline#readme",
+  "bugs": {
+    "url": "https://github.com/gunubin/redline/issues"
+  }
+}

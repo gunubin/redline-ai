@@ -1,0 +1,13 @@
+src/
+overlay/ai-edit-overlay.ts
+overlay/tsconfig.json
+test/
+docs/
+plans/
+.idea/
+.git/
+*.tsbuildinfo
+esbuild.config.js
+tsconfig.json
+redline.toml.example
+SPEC.md

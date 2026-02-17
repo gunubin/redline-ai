@@ -1,0 +1,11 @@
+[proxy]
+target = "http://localhost:3000"
+root = "./src/content"
+
+[[proxy.routes]]
+pattern = "/blog/:slug"
+file = "blog/:slug.mdx"
+
+[[proxy.routes]]
+pattern = "/docs/:path*"
+file = ":path.md"
