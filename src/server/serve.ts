@@ -11,7 +11,7 @@ import { setupHMR } from './hmr.js';
 
 export async function startServeMode(
   dir: string,
-  opts: { port: number; open?: boolean },
+  opts: { port: number; host: string; open?: boolean },
 ): Promise<void> {
   const rootDir = resolve(dir);
 
@@ -73,10 +73,11 @@ export async function startServeMode(
   const server = serve({
     fetch: app.fetch,
     port: opts.port,
-    hostname: '127.0.0.1',
+    hostname: opts.host,
   }, (info) => {
     console.log(`[redline-ai] Serving ${rootDir}`);
-    console.log(`[redline-ai] http://localhost:${info.port}`);
+    const displayHost = opts.host === '0.0.0.0' ? 'localhost' : opts.host;
+    console.log(`[redline-ai] http://${displayHost}:${info.port}`);
   });
 
   setupHMR(server as import('node:http').Server, rootDir);

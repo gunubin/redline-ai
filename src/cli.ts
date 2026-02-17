@@ -13,10 +13,11 @@ program
   .description('Preview Markdown files with AI editing')
   .argument('<dir>', 'Directory containing Markdown files')
   .option('-p, --port <port>', 'Port number', '4321')
+  .option('--host <host>', 'Host to bind (use 0.0.0.0 for LAN access)', '127.0.0.1')
   .option('--open', 'Open browser automatically')
-  .action(async (dir: string, opts: { port: string; open?: boolean }) => {
+  .action(async (dir: string, opts: { port: string; host: string; open?: boolean }) => {
     const { startServeMode } = await import('./server/serve.js');
-    await startServeMode(dir, { port: Number(opts.port), open: opts.open });
+    await startServeMode(dir, { port: Number(opts.port), host: opts.host, open: opts.open });
   });
 
 program
@@ -26,13 +27,15 @@ program
   .option('-r, --root <dir>', 'Root directory for source files')
   .option('-c, --config <path>', 'Path to redline.toml config file', 'redline.toml')
   .option('-p, --port <port>', 'Port number', '4321')
-  .action(async (opts: { target?: string; root?: string; config: string; port: string }) => {
+  .option('--host <host>', 'Host to bind (use 0.0.0.0 for LAN access)', '127.0.0.1')
+  .action(async (opts: { target?: string; root?: string; config: string; port: string; host: string }) => {
     const { startProxyMode } = await import('./server/proxy.js');
     await startProxyMode({
       target: opts.target,
       root: opts.root,
       configPath: opts.config,
       port: Number(opts.port),
+      host: opts.host,
     });
   });
 

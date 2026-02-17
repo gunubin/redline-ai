@@ -14,6 +14,7 @@ export interface ProxyOptions {
   root?: string;
   configPath: string;
   port: number;
+  host: string;
 }
 
 export async function startProxyMode(opts: ProxyOptions): Promise<void> {
@@ -156,10 +157,11 @@ window.__REDLINE_CONFIG = {
     }
   });
 
-  server.listen(opts.port, '127.0.0.1', () => {
+  server.listen(opts.port, opts.host, () => {
+    const displayHost = opts.host === '0.0.0.0' ? 'localhost' : opts.host;
     console.log(`[redline-ai] Proxy mode`);
     console.log(`[redline-ai] Target: ${target}`);
     console.log(`[redline-ai] Root: ${rootDir}`);
-    console.log(`[redline-ai] http://localhost:${opts.port}`);
+    console.log(`[redline-ai] http://${displayHost}:${opts.port}`);
   });
 }
