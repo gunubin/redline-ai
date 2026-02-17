@@ -161,3 +161,76 @@ export function findInSource(filePath: string, selectedText: string): MatchResul
     matchedSource,
   };
 }
+
+/**
+ * Find a section by heading text in a Markdown/MDX file.
+ * A section spans from the heading line to the line before the next heading
+ * of equal or higher level (or end of file).
+ */
+export function findSection(
+  filePath: string,
+  headingText: string,
+  headingLevel: number,
+): MatchResult | null {
+  const source = readFileSync(filePath, 'utf-8');
+  const lines = source.split('\n');
+
+  // Skip frontmatter
+  let contentStart = 0;
+  if (lines[0]?.trim() === '---') {
+    for (let i = 1; i < lines.length; i++) {
+      if (lines[i]?.trim() === '---') {
+        contentStart = i + 1;
+        break;
+      }
+    }
+  }
+
+  // Find the heading line
+  const headingPrefix = '#'.repeat(headingLevel) + ' ';
+  let startLine = -1;
+
+  for (let i = contentStart; i < lines.length; i++) {
+    const trimmed = lines[i]!.trim();
+    if (trimmed.startsWith(headingPrefix)) {
+      const text = stripMarkdown(trimmed);
+      if (normalizeWhitespace(text) === normalizeWhitespace(headingText)) {
+        startLine = i;
+        break;
+      }
+    }
+  }
+
+  if (startLine === -1) return null;
+
+  // Find section end: next heading of equal or higher level, or EOF
+  // Must track code blocks to avoid treating # in code as headings
+  let endLine = lines.length - 1;
+  let inCodeBlock = false;
+  for (let i = startLine + 1; i < lines.length; i++) {
+    const trimmed = lines[i]!.trim();
+    if (/^```/.test(trimmed)) {
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+    if (inCodeBlock) continue;
+    const match = trimmed.match(/^(#{1,6})\s/);
+    if (match && match[1]!.length <= headingLevel) {
+      // Exclude trailing blank lines before next heading
+      endLine = i - 1;
+      while (endLine > startLine && lines[endLine]!.trim() === '') {
+        endLine--;
+      }
+      break;
+    }
+  }
+
+  const matchedSource = lines.slice(startLine, endLine + 1).join('\n');
+
+  return {
+    filePath,
+    startLine: startLine + 1, // 1-indexed
+    endLine: endLine + 1,
+    matchedSource,
+  };
+}

@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { Hono } from 'hono';
-import { resolveFilePath, findInSource } from '../matcher/index.js';
+import { resolveFilePath, findInSource, findSection } from '../matcher/index.js';
 import { ClaudeCodeAgent } from '../agent/claude.js';
 import { validateFilePath } from '../security.js';
 import type { AgentConfig } from '../config.js';
@@ -9,16 +9,31 @@ export function registerApiRoutes(app: Hono, rootDir: string, agentConfig?: Agen
   const agent = new ClaudeCodeAgent(agentConfig);
 
   app.post('/api/edit', async (c) => {
-    let body: { filePath: string; selectedText: string; instruction: string };
+    let body: {
+      filePath: string;
+      selectedText?: string;
+      instruction: string;
+      mode?: 'selection' | 'file' | 'section';
+      sectionHeading?: string;
+      sectionLevel?: number;
+    };
     try {
       body = await c.req.json();
     } catch {
       return c.json({ error: 'Invalid JSON in request body' }, 400);
     }
-    const { filePath, selectedText, instruction } = body;
+    const { filePath, instruction, mode = 'selection' } = body;
 
-    if (!filePath || !selectedText || !instruction) {
+    if (!filePath || !instruction) {
       return c.json({ error: 'Missing required fields' }, 400);
+    }
+
+    if (mode === 'selection' && !body.selectedText) {
+      return c.json({ error: 'Missing selectedText for selection mode' }, 400);
+    }
+
+    if (mode === 'section' && (!body.sectionHeading || !body.sectionLevel)) {
+      return c.json({ error: 'Missing sectionHeading/sectionLevel for section mode' }, 400);
     }
 
     const resolved = resolveFilePath(rootDir, filePath);
@@ -27,29 +42,56 @@ export function registerApiRoutes(app: Hono, rootDir: string, agentConfig?: Agen
     }
 
     try {
-      const match = findInSource(resolved, selectedText);
-      if (!match) {
-        return c.json({ error: 'ソース内にテキストが見つかりません。' }, 404);
+      const fullSource = readFileSync(resolved, 'utf-8');
+      const lines = fullSource.split('\n');
+      let matchedSource: string;
+      let selectedText: string;
+      let startLine: number;
+      let endLine: number;
+
+      if (mode === 'file') {
+        matchedSource = fullSource;
+        selectedText = fullSource;
+        startLine = 1;
+        endLine = lines.length;
+      } else if (mode === 'section') {
+        const sectionMatch = findSection(resolved, body.sectionHeading!, body.sectionLevel!);
+        if (!sectionMatch) {
+          return c.json({ error: 'セクションが見つかりません。' }, 404);
+        }
+        matchedSource = sectionMatch.matchedSource;
+        selectedText = sectionMatch.matchedSource;
+        startLine = sectionMatch.startLine;
+        endLine = sectionMatch.endLine;
+      } else {
+        const match = findInSource(resolved, body.selectedText!);
+        if (!match) {
+          return c.json({ error: 'ソース内にテキストが見つかりません。' }, 404);
+        }
+        matchedSource = match.matchedSource;
+        selectedText = body.selectedText!;
+        startLine = match.startLine;
+        endLine = match.endLine;
       }
 
-      const fullSource = readFileSync(resolved, 'utf-8');
       const modified = await agent.edit({
         fullSource,
-        matchedSource: match.matchedSource,
+        matchedSource,
         selectedText,
-        startLine: match.startLine,
-        endLine: match.endLine,
+        startLine,
+        endLine,
         instruction,
         fileKey: filePath,
       });
 
       return c.json({
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        original: match.matchedSource,
+        original: matchedSource,
         modified,
-        startLine: match.startLine,
-        endLine: match.endLine,
-        filePath: match.filePath,
+        startLine,
+        endLine,
+        filePath: resolved,
+        mode,
       });
     } catch (err) {
       console.error(`[redline-ai] /api/edit failed for ${filePath}:`, err);

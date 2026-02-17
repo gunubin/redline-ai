@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { writeFileSync, rmSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { findInSource, resolveFilePath } from '../src/matcher/index.js';
+import { findInSource, findSection, resolveFilePath } from '../src/matcher/index.js';
 
 const TEST_DIR = join(tmpdir(), 'redline-test-matcher');
 const TEST_FILE = join(TEST_DIR, 'test.mdx');
@@ -706,5 +706,206 @@ if (a) {
     const result = findInSource(file, 'ここが正しくマッチすべき段落です。');
     assert.ok(result);
     assert.equal(result.startLine, 13);
+  });
+});
+
+// =====================================================
+// findSection
+// =====================================================
+describe('findSection', () => {
+  it('H1セクションの範囲を正しく取得する', () => {
+    const file = createTestFile(`---
+title: test
+---
+
+# セクション1
+
+段落A。
+
+# セクション2
+
+段落B。
+`);
+    const result = findSection(file, 'セクション1', 1);
+    assert.ok(result);
+    assert.equal(result.startLine, 5);
+    assert.ok(result.matchedSource.includes('# セクション1'));
+    assert.ok(result.matchedSource.includes('段落A。'));
+    assert.ok(!result.matchedSource.includes('セクション2'));
+  });
+
+  it('H2セクションの範囲を正しく取得する', () => {
+    const file = createTestFile(`# タイトル
+
+## 子セクション1
+
+段落A。
+
+## 子セクション2
+
+段落B。
+`);
+    const result = findSection(file, '子セクション1', 2);
+    assert.ok(result);
+    assert.ok(result.matchedSource.includes('## 子セクション1'));
+    assert.ok(result.matchedSource.includes('段落A。'));
+    assert.ok(!result.matchedSource.includes('子セクション2'));
+  });
+
+  it('H3セクションが上位レベル見出しで区切られる', () => {
+    const file = createTestFile(`## 親
+
+### 子セクション
+
+段落。
+
+## 次の親
+
+別の内容。
+`);
+    const result = findSection(file, '子セクション', 3);
+    assert.ok(result);
+    assert.ok(result.matchedSource.includes('### 子セクション'));
+    assert.ok(result.matchedSource.includes('段落。'));
+    assert.ok(!result.matchedSource.includes('次の親'));
+  });
+
+  it('最後のセクションはファイル末尾まで含む', () => {
+    const file = createTestFile(`# 最初
+
+段落。
+
+# 最後のセクション
+
+これが最後。
+
+最終段落。
+`);
+    const result = findSection(file, '最後のセクション', 1);
+    assert.ok(result);
+    assert.ok(result.matchedSource.includes('これが最後。'));
+    assert.ok(result.matchedSource.includes('最終段落。'));
+  });
+
+  it('該当見出しなしでnullを返す', () => {
+    const file = createTestFile(`# タイトル
+
+段落。
+`);
+    const result = findSection(file, '存在しない見出し', 1);
+    assert.equal(result, null);
+  });
+
+  it('frontmatterをスキップしてセクションを取得する', () => {
+    const file = createTestFile(`---
+title: テスト記事
+date: 2026-01-01
+---
+
+# 本文セクション
+
+本文テキスト。
+`);
+    const result = findSection(file, '本文セクション', 1);
+    assert.ok(result);
+    assert.equal(result.startLine, 6);
+    assert.ok(result.matchedSource.includes('# 本文セクション'));
+    assert.ok(result.matchedSource.includes('本文テキスト。'));
+  });
+
+  it('Markdown装飾付き見出しにマッチする', () => {
+    const file = createTestFile(`# **太字の見出し**
+
+段落。
+
+# 次の見出し
+`);
+    const result = findSection(file, '太字の見出し', 1);
+    assert.ok(result);
+    assert.ok(result.matchedSource.includes('**太字の見出し**'));
+    assert.ok(result.matchedSource.includes('段落。'));
+  });
+
+  it('コードブロック内の#をセクション区切りと誤認しない', () => {
+    const file = createTestFile(`### 設定方法
+
+以下のコードを使います:
+
+\`\`\`python
+# This is a Python comment
+def setup():
+    # Another comment
+    pass
+\`\`\`
+
+設定完了後の説明。
+
+## 次のセクション
+`);
+    const result = findSection(file, '設定方法', 3);
+    assert.ok(result);
+    assert.ok(result.matchedSource.includes('# This is a Python comment'));
+    assert.ok(result.matchedSource.includes('設定完了後の説明。'));
+    assert.ok(!result.matchedSource.includes('次のセクション'));
+  });
+
+  it('絵文字付き見出しのセクションを取得する', () => {
+    const file = createTestFile(`# 🧩 コンポーネント設計
+
+コンポーネントの説明。
+
+# ⚠️ エラーハンドリング
+`);
+    const result = findSection(file, '🧩 コンポーネント設計', 1);
+    assert.ok(result);
+    assert.ok(result.matchedSource.includes('コンポーネントの説明。'));
+    assert.ok(!result.matchedSource.includes('エラーハンドリング'));
+  });
+
+  it('空セクション（見出し直後に次の見出し）', () => {
+    const file = createTestFile(`# セクションA
+
+# セクションB
+
+内容B。
+`);
+    const result = findSection(file, 'セクションA', 1);
+    assert.ok(result);
+    assert.equal(result.startLine, 1);
+    assert.equal(result.endLine, 1);
+    assert.ok(result.matchedSource.includes('# セクションA'));
+    assert.ok(!result.matchedSource.includes('セクションB'));
+  });
+
+  it('H3セクション内のH4はセクションを区切らない', () => {
+    const file = createTestFile(`### メインセクション
+
+概要。
+
+#### サブセクション
+
+詳細。
+
+### 次のセクション
+`);
+    const result = findSection(file, 'メインセクション', 3);
+    assert.ok(result);
+    assert.ok(result.matchedSource.includes('#### サブセクション'));
+    assert.ok(result.matchedSource.includes('詳細。'));
+    assert.ok(!result.matchedSource.includes('次のセクション'));
+  });
+
+  it('末尾の空行がmatchedSourceに含まれない', () => {
+    const file = createTestFile(`# セクション1
+
+段落。
+
+
+
+# セクション2
+`);
+    const result = findSection(file, 'セクション1', 1);
+    assert.ok(result);
+    assert.ok(result.matchedSource.endsWith('段落。'));
   });
 });
