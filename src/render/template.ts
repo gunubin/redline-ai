@@ -38,9 +38,9 @@ function renderTree(node: TreeNode, currentPath: string, depth: number = 0): str
     const isAncestor = currentPath.startsWith(dir.path + '/') || currentPath === dir.path;
     const collapsedClass = isAncestor ? '' : 'collapsed';
     lines.push(`<div style="padding-left:${pad}rem" class="${collapsedClass}">
-  <button onclick="this.parentElement.classList.toggle('collapsed')" class="flex items-center gap-1 py-0.5 text-gray-300 hover:text-white w-full text-left text-xs">
-    <svg class="w-3 h-3 text-gray-500 transition-transform arrow-icon shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-    <svg class="w-3.5 h-3.5 text-yellow-500/70 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+  <button onclick="this.parentElement.classList.toggle('collapsed')" class="flex items-center gap-1.5 py-2 text-gray-300 hover:text-white w-full text-left text-sm">
+    <svg class="w-3.5 h-3.5 text-gray-500 transition-transform arrow-icon shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+    <svg class="w-4 h-4 text-yellow-500/70 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
     <span class="truncate">${escapeHtml(dir.name)}</span>
     <span class="text-gray-600 ml-auto shrink-0">${countFiles(dir)}</span>
   </button>
@@ -54,8 +54,8 @@ function renderTree(node: TreeNode, currentPath: string, depth: number = 0): str
     const isActive = file.path === currentPath;
     const activeClass = isActive ? 'bg-violet-500/15 text-violet-300' : 'text-gray-400 hover:text-violet-300 hover:bg-gray-800/50';
     lines.push(`<div style="padding-left:${pad}rem">
-  <a href="/${escapeHtml(file.path)}" class="flex items-center gap-1 py-0.5 text-xs rounded px-1 pl-4 truncate ${activeClass}">
-    <svg class="w-3.5 h-3.5 text-gray-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+  <a href="/${escapeHtml(file.path)}" class="flex items-center gap-1.5 py-2 text-sm rounded px-1 pl-4 truncate ${activeClass}">
+    <svg class="w-4 h-4 text-gray-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
     <span class="truncate">${escapeHtml(displayName)}</span>
   </a>
 </div>`);

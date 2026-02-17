@@ -85,7 +85,9 @@ function showFloatingBtn(rect: DOMRect) {
   const btn = document.createElement('button');
   btn.className = tw.btn;
   btn.textContent = 'AI Edit';
-  btn.style.left = `${rect.left + window.scrollX}px`;
+  const btnWidth = 80; // approximate button width
+  const left = Math.min(rect.left + window.scrollX, window.innerWidth - btnWidth - 8);
+  btn.style.left = `${Math.max(8, left)}px`;
   btn.style.top = `${rect.bottom + window.scrollY + 6}px`;
   btn.addEventListener('click', (e) => {
     e.preventDefault();
@@ -187,9 +189,13 @@ function removeHighlights(marks: HTMLElement[]) {
 // --- Inline Editor ---
 function positionContainer(container: HTMLElement, rect: DOMRect) {
   const gap = 8;
+  const margin = 8;
   const top = rect.bottom + window.scrollY + gap;
-  const left = Math.max(8, rect.left + window.scrollX);
-  const maxWidth = Math.min(480, window.innerWidth - 16);
+  const maxWidth = Math.min(480, window.innerWidth - margin * 2);
+  const left = Math.min(
+    Math.max(margin, rect.left + window.scrollX),
+    window.innerWidth - maxWidth - margin,
+  );
   container.style.position = 'absolute';
   container.style.top = `${top}px`;
   container.style.left = `${left}px`;
