@@ -43,7 +43,7 @@ export async function startProxyMode(opts: ProxyOptions): Promise<void> {
   app.use('*', cors({
     origin: (origin) => /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ? origin : null,
   }));
-  registerApiRoutes(app, rootDir);
+  registerApiRoutes(app, rootDir, config?.agent);
 
   // Serve overlay JS via Hono
   app.get('/__redline/overlay.js', (c) => {

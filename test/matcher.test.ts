@@ -626,3 +626,85 @@ title: test
     assert.equal(result.matchedSource, expected);
   });
 });
+
+// =====================================================
+// findInSource - コードブロック後の見出しマッチング
+// =====================================================
+describe('findInSource - コードブロック後の見出しマッチング', () => {
+  it('インデント付きコードブロックの後の見出しが正しい行にマッチする', () => {
+    const file = createTestFile(`# 前の見出し
+
+段落テキスト。
+
+\`\`\`typescript
+export const create = () => {
+  const redux = Provider.create();
+  return {
+    signIn: async () => {
+      const { data, error } = await redux.dispatch(
+        api.endpoints.createToken.initiate(),
+      );
+      return data;
+    },
+    signOut: async () => {
+      const { data, error } = await redux.dispatch(
+        api.endpoints.deleteToken.initiate(),
+      );
+      return data;
+    },
+  };
+};
+\`\`\`
+
+# コンポーネント設計方針（Component Layer）
+
+本文テキスト。
+`);
+    const result = findInSource(file, 'コンポーネント設計方針（Component Layer）');
+    assert.ok(result, '見出しがマッチしない');
+    assert.ok(result.matchedSource.includes('# コンポーネント設計方針'), `matchedSource should contain heading, got: ${result.matchedSource}`);
+    assert.ok(!result.matchedSource.includes('redux.dispatch'), 'コードブロック内の行にマッチすべきでない');
+  });
+
+  it('絵文字付き見出しがコードブロック後に正しくマッチする', () => {
+    const file = createTestFile(`# 前セクション
+
+\`\`\`typescript
+const { data, error } = await redux.dispatch(
+        authApi.endpoints.createAccessToken.initiate({
+          email,
+          password,
+        }),
+);
+\`\`\`
+
+# 🧩 コンポーネント設計方針（Component Layer）
+
+ここは本文です。
+`);
+    const result = findInSource(file, '🧩 コンポーネント設計方針（Component Layer）');
+    assert.ok(result, '絵文字付き見出しがマッチしない');
+    assert.ok(result.matchedSource.includes('# 🧩'), `matchedSource should contain emoji heading, got: ${result.matchedSource}`);
+    assert.ok(!result.matchedSource.includes('redux.dispatch'), 'コードブロック内の行にマッチすべきでない');
+  });
+
+  it('深くインデントされたコードブロックがあっても後続テキストの位置がずれない', () => {
+    const file = createTestFile(`# 見出し1
+
+\`\`\`typescript
+if (a) {
+    if (b) {
+        if (c) {
+            const result = await something.very.deeply.nested();
+        }
+    }
+}
+\`\`\`
+
+ここが正しくマッチすべき段落です。
+`);
+    const result = findInSource(file, 'ここが正しくマッチすべき段落です。');
+    assert.ok(result);
+    assert.equal(result.startLine, 13);
+  });
+});

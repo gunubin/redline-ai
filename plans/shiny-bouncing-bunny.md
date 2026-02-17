@@ -1,63 +1,68 @@
-# ユニットテスト追加プラン（簡単なモジュール4つ）
+# エージェントプロンプトの設定化
 
 ## Context
 
-redline-ai は matcher のテスト（39件）のみ。security, session, route-map, config の4モジュールは純粋関数/シンプルなロジックでモック不要。既存の `node:test` パターンに合わせて追加する。
+現在 `src/agent/claude.ts` にハードコードされているプロンプトをユーザーが `redline.toml` から変更可能にする。`{{variable}}` プレースホルダーでテンプレート化し、初回/2回目以降の2テンプレートを設定可能にする。
 
-## 対象ファイルと新規テストファイル
+## 変更ファイル
 
-### 1. `test/security.test.ts` ← `src/security.ts`
+### 1. `src/config.ts` — AgentConfig 追加
 
-`validateFilePath(rootDir, filePath)` のテスト:
-- 正常パス → 絶対パスを返す
-- `../../etc/passwd` → null（トラバーサル拒否）
-- rootDir自体を指定 → null
-- 相対パス（`docs/hello.md`） → 正しく解決
-- 空文字 → rootDir自体になるケース
+```typescript
+export interface AgentConfig {
+  prompt_first_call?: string;
+  prompt_subsequent_call?: string;
+}
 
-### 2. `test/session.test.ts` ← `src/agent/session.ts`
+export interface RedlineConfig {
+  proxy: ProxyConfig;
+  agent: AgentConfig;
+}
+```
 
-`getSession`, `setSession`, `deleteSession`, `hasSession` のCRUD:
-- set → get で取得できる
-- 未設定キー → undefined
-- has → true/false
-- delete → 取得不可になる
-- 異なるキーは独立
+`loadConfig` で `parsed.agent?.prompt_first_call` 等をパースし、`agent` フィールドにセット。未設定なら `{}` を返す。
 
-注意: グローバル Map なのでテスト間で状態が共有される → 各テストで `deleteSession` してクリーンアップ
+### 2. `src/agent/prompt.ts` — 新規: テンプレートエンジン + デフォルトプロンプト
 
-### 3. `test/route-map.test.ts` ← `src/route-map.ts`
+- `DEFAULT_FIRST_CALL` / `DEFAULT_SUBSEQUENT_CALL` 定数（現在のハードコード内容）
+- `renderPrompt(template, vars)`: `{{fullSource}}`, `{{target}}`, `{{startLine}}`, `{{endLine}}`, `{{instruction}}`, `{{selectionContext}}` を置換
+- 利用可能な変数一覧をexport（ドキュメント用）
 
-`RouteMap.resolve(urlPath)` のテスト:
-- `/blog/my-post` → `blog/my-post`（`:slug` パターン）
-- `/docs/guide/intro` → `guide/intro`（`:path*` ワイルドカード）
-- `/about` → null（マッチしないURL）
-- `/blog/my-post/` → 末尾スラッシュでもマッチ
-- 複数ルート定義 → 最初にマッチしたものを返す
-- 空ルート → 常にnull
+### 3. `src/agent/claude.ts` — テンプレート利用に変更
 
-### 4. `test/config.test.ts` ← `src/config.ts`
+- コンストラクタで `AgentConfig` を受け取る
+- `config.prompt_first_call ?? DEFAULT_FIRST_CALL` を使用
+- `renderPrompt()` でプレースホルダーを埋めてプロンプト生成
 
-`loadConfig(configPath)` のテスト（tmpファイル使用）:
-- 正常TOML → ProxyConfig を返す
-- 存在しないファイル → null
-- root がconfigファイル基準で解決される
-- proxy セクションなし → デフォルト値
-- routes 定義あり → 正しくパース
+### 4. `src/server/api.ts` — config 受け渡し
 
-tmpDir に TOML fixture を書き出す（matcher.test.ts と同じパターン）
+`registerApiRoutes(app, rootDir, agentConfig?)` → `new ClaudeCodeAgent(agentConfig)`
 
-## 実装方針
+### 5. `src/server/index.ts` / `serve.ts` / `proxy.ts` — config 伝播
 
-- フレームワーク: `node:test`（`describe`, `it`, `before`, `after`）
-- アサーション: `node:assert/strict`
-- fixture: `os.tmpdir()` + `before`/`after` で作成/削除（既存パターン踏襲）
-- 実行: `npm test`（既存の `node --import tsx --test test/**/*.test.ts`）
+`createApp(rootDir, agentConfig?)` → `registerApiRoutes` へ中継。`startServeMode`/`startProxyMode` で `loadConfig` 結果から `agent` を取得して渡す。
+
+### 6. `redline.toml.example` — 設定例追加
+
+```toml
+[agent]
+prompt_first_call = """
+あなたは{{role}}です。以下は編集対象のドキュメント全体です:
+<article>
+{{fullSource}}
+</article>
+...
+"""
+```
+
+### 7. `test/prompt.test.ts` — テンプレートエンジンのテスト
+
+- プレースホルダー置換の正確性
+- 未知の変数はそのまま残す
+- デフォルトテンプレートでの動作確認
 
 ## 検証
 
 ```bash
-npm test
+npm run build && npm test
 ```
-
-全テスト（既存39 + 新規約20件）がパスすること

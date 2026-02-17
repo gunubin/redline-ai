@@ -111,36 +111,46 @@ export function findInSource(filePath: string, selectedText: string): MatchResul
     }
   }
 
-  // Concatenate plain text for multi-line matching
-  const joinedPlain = plainLines.map((l) => l.text).join(' ');
-  const matchIndex = normalizeWhitespace(joinedPlain).indexOf(normalizedSelected);
+  // Pre-normalize each line for consistent position tracking.
+  // Without this, code block lines with leading whitespace cause offset mismatches
+  // between the normalized search string and the character count loop.
+  const entries: { text: string; lineIndex: number }[] = [];
+  for (const pl of plainLines) {
+    const normalized = normalizeWhitespace(pl.text);
+    if (normalized) {
+      entries.push({ text: normalized, lineIndex: pl.lineIndex });
+    }
+  }
+
+  // Concatenate for multi-line matching (already normalized, join is clean)
+  const joinedPlain = entries.map((e) => e.text).join(' ');
+  const matchIndex = joinedPlain.indexOf(normalizedSelected);
 
   if (matchIndex === -1) return null;
 
   // Find which lines the match spans
   let charCount = 0;
-  let startLineIdx = -1;
-  let endLineIdx = -1;
+  let startEntryIdx = -1;
+  let endEntryIdx = -1;
 
-  for (let i = 0; i < plainLines.length; i++) {
-    const lineText = plainLines[i]!.text;
-    const lineEnd = charCount + lineText.length;
+  for (let i = 0; i < entries.length; i++) {
+    const lineEnd = charCount + entries[i]!.text.length;
 
-    if (startLineIdx === -1 && lineEnd > matchIndex) {
-      startLineIdx = i;
+    if (startEntryIdx === -1 && lineEnd > matchIndex) {
+      startEntryIdx = i;
     }
     if (lineEnd >= matchIndex + normalizedSelected.length) {
-      endLineIdx = i;
+      endEntryIdx = i;
       break;
     }
 
     charCount = lineEnd + 1; // +1 for the space joiner
   }
 
-  if (startLineIdx === -1 || endLineIdx === -1) return null;
+  if (startEntryIdx === -1 || endEntryIdx === -1) return null;
 
-  const startLine = plainLines[startLineIdx]!.lineIndex;
-  const endLine = plainLines[endLineIdx]!.lineIndex;
+  const startLine = entries[startEntryIdx]!.lineIndex;
+  const endLine = entries[endEntryIdx]!.lineIndex;
 
   const matchedSource = lines.slice(startLine, endLine + 1).join('\n');
 

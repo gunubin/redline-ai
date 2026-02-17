@@ -3,9 +3,10 @@ import type { Hono } from 'hono';
 import { resolveFilePath, findInSource } from '../matcher/index.js';
 import { ClaudeCodeAgent } from '../agent/claude.js';
 import { validateFilePath } from '../security.js';
+import type { AgentConfig } from '../config.js';
 
-export function registerApiRoutes(app: Hono, rootDir: string): void {
-  const agent = new ClaudeCodeAgent();
+export function registerApiRoutes(app: Hono, rootDir: string, agentConfig?: AgentConfig): void {
+  const agent = new ClaudeCodeAgent(agentConfig);
 
   app.post('/api/edit', async (c) => {
     let body: { filePath: string; selectedText: string; instruction: string };

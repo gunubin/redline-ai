@@ -32,6 +32,18 @@ The source Markdown file is rewritten on disk. The preview refreshes automatical
 - Anyone with an Obsidian vault, Hugo site, or plain Markdown folder
 - Developers who want to proofread rendered output, not raw markup
 
+## Use Cases
+
+### Phone-first editing with Happy Coder
+
+Reading on your phone helps things stick. With `--host 0.0.0.0`, redline-ai is accessible from any device on your local network.
+
+```
+$ npx redline-ai serve ./docs --host 0.0.0.0
+```
+
+Open the URL on your phone, read through the rendered docs, and edit inline. Pair this with [Happy Coder](https://happy.engineering/) -- a mobile client for Claude Code -- to generate drafts from your phone, then polish them directly in redline-ai.
+
 ## Two Modes
 
 ### Standalone (`serve`)
@@ -102,6 +114,8 @@ npx redline-ai serve ./docs
 ```
 redline-ai serve <dir>           # Preview and edit Markdown files
   --port <port>                  # Port number (default: 4321)
+  --host <host>                  # Host to bind (default: 127.0.0.1, use 0.0.0.0 for LAN)
+  --config <path>                # Config file (default: redline.toml)
   --open                         # Open browser automatically
 
 redline-ai proxy                 # Proxy an existing dev server
@@ -109,7 +123,58 @@ redline-ai proxy                 # Proxy an existing dev server
   --root <dir>                   # Source file directory
   --config <path>                # Config file (default: redline.toml)
   --port <port>                  # Port number (default: 4321)
+  --host <host>                  # Host to bind (default: 127.0.0.1, use 0.0.0.0 for LAN)
 ```
+
+## Customizing AI Prompts
+
+You can customize the prompts sent to Claude by adding an `[agent]` section to `redline.toml`:
+
+```toml
+[agent]
+prompt_first_call = """
+You are a technical editor. Here is the full document:
+
+<article>
+{{fullSource}}
+</article>
+
+Edit L{{startLine}}-{{endLine}}:
+
+<target>
+{{target}}
+</target>
+{{selectionContext}}
+Instruction: {{instruction}}
+
+Return only the modified target text.
+"""
+
+prompt_subsequent_call = """
+Edit L{{startLine}}-{{endLine}} of the same document:
+
+<target>
+{{target}}
+</target>
+{{selectionContext}}
+Instruction: {{instruction}}
+
+Return only the modified target text.
+"""
+```
+
+Available template variables:
+
+| Variable | Description |
+|---|---|
+| `{{fullSource}}` | Full document content |
+| `{{target}}` | The matched source text to edit |
+| `{{startLine}}` | Start line number |
+| `{{endLine}}` | End line number |
+| `{{instruction}}` | User's edit instruction |
+| `{{selectionContext}}` | Additional context when a sub-selection is made |
+
+If omitted, built-in default prompts are used.
 
 ## License
 

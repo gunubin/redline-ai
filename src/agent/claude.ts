@@ -2,44 +2,42 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { getSession, setSession, deleteSession, hasSession } from './session.js';
 import type { Agent, EditContext } from './index.js';
+import type { AgentConfig } from '../config.js';
+import { DEFAULT_FIRST_CALL, DEFAULT_SUBSEQUENT_CALL, renderPrompt } from './prompt.js';
 
 export class ClaudeCodeAgent implements Agent {
-  edit(ctx: EditContext): Promise<string> {
-    const { fullSource, matchedSource, selectedText, startLine, endLine, instruction, fileKey } = ctx;
-    const isFirstCall = !hasSession(fileKey);
+  private firstCallTemplate: string;
+  private subsequentCallTemplate: string;
+
+  constructor(agentConfig?: AgentConfig) {
+    this.firstCallTemplate = agentConfig?.prompt_first_call ?? DEFAULT_FIRST_CALL;
+    this.subsequentCallTemplate = agentConfig?.prompt_subsequent_call ?? DEFAULT_SUBSEQUENT_CALL;
+  }
+
+  buildPrompt(ctx: EditContext, isFirstCall: boolean): string {
+    const { fullSource, matchedSource, selectedText, startLine, endLine, instruction } = ctx;
     const selectionContext =
       selectedText !== matchedSource.trim()
         ? `\nユーザーが選択した部分: 「${selectedText}」\n指示はこの選択部分に対して適用してください。選択部分以外は変更しないでください。`
         : '';
 
-    let prompt: string;
-    if (isFirstCall) {
-      prompt = `あなたはドキュメントの編集アシスタントです。以下は編集対象のMarkdownドキュメント全体です:
+    const vars: Record<string, string> = {
+      fullSource,
+      target: matchedSource,
+      startLine: String(startLine),
+      endLine: String(endLine),
+      instruction,
+      selectionContext,
+    };
 
-<article>
-${fullSource}
-</article>
+    const template = isFirstCall ? this.firstCallTemplate : this.subsequentCallTemplate;
+    return renderPrompt(template, vars);
+  }
 
-上記のドキュメントのL${startLine}-${endLine}にある以下の箇所を編集してください:
-
-<target>
-${matchedSource}
-</target>
-${selectionContext}
-指示: ${instruction}
-
-修正後のtarget全体を返してください。Markdown記法はそのまま維持してください。説明や前置きは不要です。`;
-    } else {
-      prompt = `同じドキュメントのL${startLine}-${endLine}にある以下の箇所を編集してください:
-
-<target>
-${matchedSource}
-</target>
-${selectionContext}
-指示: ${instruction}
-
-修正後のtarget全体を返してください。Markdown記法はそのまま維持してください。説明や前置きは不要です。`;
-    }
+  edit(ctx: EditContext): Promise<string> {
+    const { fileKey } = ctx;
+    const isFirstCall = !hasSession(fileKey);
+    const prompt = this.buildPrompt(ctx, isFirstCall);
 
     return new Promise((resolve, reject) => {
       const env = Object.fromEntries(
@@ -83,7 +81,7 @@ ${selectionContext}
           reject(new Error(`Claude CLI exited with code ${code}: ${stderr}`));
           return;
         }
-        resolve(stdout.trim());
+        resolve(stripCodeFences(stdout.trim()));
       });
       proc.on('error', (err) => {
         clearTimeout(timeout);
@@ -95,4 +93,13 @@ ${selectionContext}
   resetSession(fileKey: string): void {
     deleteSession(fileKey);
   }
+}
+
+/**
+ * Strip wrapping code fences from LLM output.
+ * Handles: ```markdown\n...\n``` , ```\n...\n``` , etc.
+ */
+function stripCodeFences(text: string): string {
+  const match = text.match(/^```[a-z]*\r?\n([\s\S]*?)\r?\n```\s*$/);
+  return match ? match[1] : text;
 }

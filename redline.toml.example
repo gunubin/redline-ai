@@ -9,3 +9,31 @@ file = "blog/:slug.mdx"
 [[proxy.routes]]
 pattern = "/docs/:path*"
 file = ":path.md"
+
+# [agent]
+# prompt_first_call = """
+# あなたは{{role}}です。以下は編集対象のドキュメント全体です:
+# <article>
+# {{fullSource}}
+# </article>
+#
+# L{{startLine}}-{{endLine}}にある以下の箇所を編集してください:
+# <target>
+# {{target}}
+# </target>
+# {{selectionContext}}
+# 指示: {{instruction}}
+#
+# 修正後のtarget全体だけを返してください。
+# """
+#
+# prompt_subsequent_call = """
+# 同じドキュメントのL{{startLine}}-{{endLine}}にある以下の箇所を編集してください:
+# <target>
+# {{target}}
+# </target>
+# {{selectionContext}}
+# 指示: {{instruction}}
+#
+# 修正後のtarget全体だけを返してください。
+# """

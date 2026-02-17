@@ -86,4 +86,38 @@ file = "docs/:path"
     assert.equal(config.proxy.routes[1]!.pattern, '/docs/:path*');
     assert.equal(config.proxy.routes[1]!.file, 'docs/:path');
   });
+
+  it('agentセクションのプロンプトをパースする', () => {
+    const configPath = createToml(`
+[agent]
+prompt_first_call = "カスタム初回: {{fullSource}}"
+prompt_subsequent_call = "カスタム2回目: {{instruction}}"
+`);
+    const config = loadConfig(configPath);
+    assert.ok(config);
+    assert.equal(config.agent.prompt_first_call, 'カスタム初回: {{fullSource}}');
+    assert.equal(config.agent.prompt_subsequent_call, 'カスタム2回目: {{instruction}}');
+  });
+
+  it('agentセクションなしでundefinedを返す', () => {
+    const configPath = createToml(`
+[proxy]
+target = "http://localhost:3000"
+`);
+    const config = loadConfig(configPath);
+    assert.ok(config);
+    assert.equal(config.agent.prompt_first_call, undefined);
+    assert.equal(config.agent.prompt_subsequent_call, undefined);
+  });
+
+  it('agentセクションで片方だけ設定できる', () => {
+    const configPath = createToml(`
+[agent]
+prompt_first_call = "初回のみカスタム"
+`);
+    const config = loadConfig(configPath);
+    assert.ok(config);
+    assert.equal(config.agent.prompt_first_call, '初回のみカスタム');
+    assert.equal(config.agent.prompt_subsequent_call, undefined);
+  });
 });

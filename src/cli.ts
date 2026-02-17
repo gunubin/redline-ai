@@ -15,9 +15,12 @@ program
   .option('-p, --port <port>', 'Port number', '4321')
   .option('--host <host>', 'Host to bind (use 0.0.0.0 for LAN access)', '127.0.0.1')
   .option('--open', 'Open browser automatically')
-  .action(async (dir: string, opts: { port: string; host: string; open?: boolean }) => {
+  .option('-c, --config <path>', 'Path to redline.toml config file', 'redline.toml')
+  .action(async (dir: string, opts: { port: string; host: string; open?: boolean; config: string }) => {
     const { startServeMode } = await import('./server/serve.js');
-    await startServeMode(dir, { port: Number(opts.port), host: opts.host, open: opts.open });
+    const { loadConfig } = await import('./config.js');
+    const config = loadConfig(opts.config);
+    await startServeMode(dir, { port: Number(opts.port), host: opts.host, open: opts.open }, config?.agent);
   });
 
 program

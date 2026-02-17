@@ -8,10 +8,12 @@ import { listMarkdownFiles, resolveFilePath } from '../matcher/index.js';
 import { renderMarkdown } from '../render/index.js';
 import { wrapInHtml, renderFileListHtml } from '../render/template.js';
 import { setupHMR } from './hmr.js';
+import type { AgentConfig } from '../config.js';
 
 export async function startServeMode(
   dir: string,
   opts: { port: number; host: string; open?: boolean },
+  agentConfig?: AgentConfig,
 ): Promise<void> {
   const rootDir = resolve(dir);
 
@@ -20,7 +22,7 @@ export async function startServeMode(
     process.exit(1);
   }
 
-  const app = createApp(rootDir);
+  const app = createApp(rootDir, agentConfig);
 
   // Serve overlay JS
   app.get('/__redline/overlay.js', (c) => {

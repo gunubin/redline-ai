@@ -13,8 +13,14 @@ export interface ProxyConfig {
   routes: RouteConfig[];
 }
 
+export interface AgentConfig {
+  prompt_first_call?: string;
+  prompt_subsequent_call?: string;
+}
+
 export interface RedlineConfig {
   proxy: ProxyConfig;
+  agent: AgentConfig;
 }
 
 export function loadConfig(configPath: string): RedlineConfig | null {
@@ -40,6 +46,10 @@ export function loadConfig(configPath: string): RedlineConfig | null {
       root?: string;
       routes?: RouteConfig[];
     };
+    agent?: {
+      prompt_first_call?: string;
+      prompt_subsequent_call?: string;
+    };
   };
   try {
     parsed = parse(raw) as typeof parsed;
@@ -58,6 +68,10 @@ export function loadConfig(configPath: string): RedlineConfig | null {
       target: parsed.proxy?.target ?? 'http://localhost:3000',
       root: resolvedRoot,
       routes: parsed.proxy?.routes ?? [],
+    },
+    agent: {
+      prompt_first_call: parsed.agent?.prompt_first_call,
+      prompt_subsequent_call: parsed.agent?.prompt_subsequent_call,
     },
   };
 }
