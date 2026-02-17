@@ -192,7 +192,7 @@ export function registerApiRoutes(app: Hono, rootDir: string, agentConfig?: Agen
       return c.json({ error: 'Missing filePath in request body' }, 400);
     }
 
-    const absPath = validateFilePath(rootDir, body.filePath);
+    const absPath = resolveFilePath(rootDir, body.filePath);
     if (!absPath) {
       return c.json({ error: 'Invalid file path' }, 403);
     }
@@ -253,7 +253,7 @@ export function registerApiRoutes(app: Hono, rootDir: string, agentConfig?: Agen
       return c.json({ error: 'Missing filePath in request body' }, 400);
     }
 
-    const absPath = validateFilePath(rootDir, body.filePath);
+    const absPath = resolveFilePath(rootDir, body.filePath);
     if (!absPath) {
       return c.json({ error: 'Invalid file path' }, 403);
     }
@@ -321,7 +321,7 @@ export function registerApiRoutes(app: Hono, rootDir: string, agentConfig?: Agen
       return c.json({ error: 'Missing filePath query parameter' }, 400);
     }
 
-    const absPath = validateFilePath(rootDir, filePathParam);
+    const absPath = resolveFilePath(rootDir, filePathParam);
     if (!absPath) {
       return c.json({ error: 'Invalid file path' }, 403);
     }
@@ -342,7 +342,7 @@ export function registerApiRoutes(app: Hono, rootDir: string, agentConfig?: Agen
     if (!body.filePath || typeof body.filePath !== 'string') {
       return c.json({ error: 'Missing filePath in request body' }, 400);
     }
-    const absPath = validateFilePath(rootDir, body.filePath);
+    const absPath = resolveFilePath(rootDir, body.filePath);
     if (!absPath) {
       return c.json({ error: 'Invalid file path' }, 403);
     }

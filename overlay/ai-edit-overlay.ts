@@ -948,8 +948,7 @@ function updateUndoBarState() {
   if (!undoBtn || !redoBtn || !undoBarEl) return;
   undoBtn.className = `${tw.undoBtn} ${historyCanUndo ? tw.undoActive : tw.undoDisabled}`;
   redoBtn.className = `${tw.undoBtn} ${historyCanRedo ? tw.undoActive : tw.undoDisabled}`;
-  // Show bar only when at least one action is available
-  undoBarEl.style.display = historyCanUndo || historyCanRedo ? 'flex' : 'none';
+  // Always visible; buttons toggle between active/disabled
 }
 
 async function performUndo() {
@@ -1085,7 +1084,7 @@ function createUndoBar() {
 
   const bar = document.createElement('div');
   bar.className = tw.undoBar;
-  bar.style.display = 'none';
+  // Always show undo bar (disabled state visible)
 
   const undo = document.createElement('button');
   undo.className = `${tw.undoBtn} ${tw.undoDisabled}`;

@@ -1,8 +1,0 @@
-[filter]
-exclude_patterns = [
-  "(?i)(api.?key|token|secret|password)",
-  "^(はい|ok|yes|y|n|no)$",
-  "戻して|取り消し|やっぱ",
-]
-exclude_tool_results = true
-min_prompt_length = 20
